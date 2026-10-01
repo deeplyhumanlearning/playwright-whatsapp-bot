@@ -1,4 +1,4 @@
-# WhatsApp Web Automation Bot
+# Playwright - WhatsApp Web Automation Bot
 
 Playwright-based WhatsApp Web automation for personalized messaging and chat data extraction.
 
