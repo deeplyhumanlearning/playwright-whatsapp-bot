@@ -37,6 +37,7 @@ playwright-whatsapp-bot/
 ├── requirements.txt
 ├── README.md
 ├── .gitignore
+├── Playwright_WhatsApp_Bot_ScreenRecord.mp4
 └── output/
     └── screenshots/
 ```
@@ -160,6 +161,10 @@ A screenshot is captured after a message is successfully sent.
 The bot is designed to continue processing when an individual contact cannot be found or an action fails.
 
 The result for each contact is recorded in the report instead of terminating the entire run.
+
+## Screen Recording
+
+[Watch the automation demo](Playwright_WhatsApp_Bot_ScreenRecord.mp4)
 
 ## Responsible Use
 
