@@ -42,21 +42,6 @@ def normalize_phone(phone):
     return digits
 
 
-def mask_phone(phone):
-    """
-    Mask a phone number for reports.
-
-    The original phone number remains available internally for WhatsApp.
-    Example: 9842389755 -> 98XXXXXX55
-    """
-    digits = clean_phone(phone)
-
-    if len(digits) >= 4:
-        return digits[:2] + ("X" * (len(digits) - 4)) + digits[-2:]
-
-    return "XXXX"
-
-
 def read_contacts():
     if not CONTACTS_FILE.exists():
         raise FileNotFoundError(f"Missing {CONTACTS_FILE.name}")
@@ -156,82 +141,6 @@ def open_contact(page, name, phone):
                 continue
 
     raise ValueError(f"Unable to open chat for phone number {phone}")
-
-
-def mask_phone_number(page):
-    """
-    Mask the phone number visible in the WhatsApp chat header.
-
-    This is a visual overlay only. The actual phone number used by
-    Playwright remains unchanged, so contact lookup and message sending
-    continue to work normally.
-    """
-    page.evaluate(
-        """
-        () => {
-            const existing = document.getElementById('playwright-phone-mask');
-            if (existing) existing.remove();
-
-            const selectors = [
-                'header span[title]',
-                'header span[dir="auto"]',
-                'header div[role="button"] span',
-                'header div[role="button"]'
-            ];
-
-            let target = null;
-
-            for (const selector of selectors) {
-                const elements = document.querySelectorAll(selector);
-
-                for (const element of elements) {
-                    const text = (element.innerText || element.textContent || '').trim();
-
-                    // Match Indian phone-number patterns and international
-                    // numbers without touching the contact name.
-                    if (/\\+?91[\\s-]?\\d{5}[\\s-]?\\d{5}/.test(text) ||
-                        /\\b\\d{10}\\b/.test(text)) {
-                        target = element;
-                        break;
-                    }
-                }
-
-                if (target) break;
-            }
-
-            if (!target) return false;
-
-            const rect = target.getBoundingClientRect();
-
-            const mask = document.createElement('div');
-            mask.id = 'playwright-phone-mask';
-
-            Object.assign(mask.style, {
-                position: 'fixed',
-                left: `${Math.max(0, rect.left - 5)}px`,
-                top: `${Math.max(0, rect.top - 3)}px`,
-                width: `${rect.width + 10}px`,
-                height: `${rect.height + 6}px`,
-                background: '#ffffff',
-                color: '#000000',
-                borderRadius: '4px',
-                zIndex: '2147483647',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontFamily: 'Arial, sans-serif',
-                fontSize: `${Math.max(12, rect.height * 0.75)}px`,
-                fontWeight: '500',
-                pointerEvents: 'none'
-            });
-
-            mask.textContent = '••••••••••';
-            document.body.appendChild(mask);
-
-            return true;
-        }
-        """
-    )
 
 
 def find_message_box(page, timeout=10000):
@@ -334,7 +243,7 @@ def send_message(page, message):
         # Take a temporary screenshot so a failed verification can be
         # diagnosed without falsely reporting the message as sent.
         debug_path = SCREENSHOT_DIR / (
-            f"send_verification_failed_{datetime.now().strftime('%H%M%S_%f')[:-3]}.png"
+            f"send_verification_failed_{datetime.now().strftime('%H%M%S')}.png"
         )
         page.screenshot(path=str(debug_path))
         raise ValueError(
@@ -365,20 +274,11 @@ def save_report(results, run_date):
     json_file = OUTPUT_DIR / f"whatsapp_report_{run_date}.json"
     xlsx_file = OUTPUT_DIR / f"whatsapp_report_{run_date}.xlsx"
 
-    # Sanitize report data before writing it. The original results still
-    # contain the real number for internal processing, but the generated
-    # JSON report contains only the masked number.
-    report_results = []
-    for result in results:
-        report_result = dict(result)
-        report_result["phone"] = mask_phone(result["phone"])
-        report_results.append(report_result)
-
     with json_file.open("w", encoding="utf-8") as file:
         json.dump(
             {
                 "run_date": run_date,
-                "contacts": report_results,
+                "contacts": results,
             },
             file,
             indent=2,
@@ -399,7 +299,7 @@ def save_report(results, run_date):
         sheet.append(
             [
                 result["name"],
-                mask_phone(result["phone"]),
+                result["phone"],
                 result["status"],
                 result["message"],
                 last_messages,
@@ -456,10 +356,6 @@ def main():
                 open_contact(page, contact["name"], contact["phone"])
                 print("  Contact opened")
 
-                # Mask the phone number visually for screen recording.
-                # This does not modify the actual WhatsApp contact or URL.
-                mask_phone_number(page)
-
                 message = contact["message"].replace("{name}", contact["name"]).strip()
 
                 if not message:
@@ -479,7 +375,8 @@ def main():
                     pass
 
                 screenshot_name = (
-                    f"{datetime.now().strftime('%H%M%S_%f')[:-3]}.png"
+                    f"{datetime.now().strftime('%H%M%S')}_"
+                    f"{clean_phone(contact['phone'])}.png"
                 )
                 screenshot_path = SCREENSHOT_DIR / screenshot_name
                 sent_message.screenshot(path=str(screenshot_path))

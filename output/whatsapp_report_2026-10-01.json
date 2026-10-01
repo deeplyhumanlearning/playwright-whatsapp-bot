@@ -1,0 +1,14 @@
+{
+  "run_date": "2026-10-01",
+  "contacts": [
+    {
+      "name": "Velmurugan Aircel",
+      "phone": "98XXXXXX55",
+      "message": "Hi Velmurugan Aircel, this is a test message sent through Playwright.",
+      "status": "sent",
+      "last_3_messages": [],
+      "screenshot": "output\\screenshots\\065742_597.png",
+      "error": ""
+    }
+  ]
+}
